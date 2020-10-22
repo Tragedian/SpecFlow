@@ -4,6 +4,7 @@
 
   <PropertyGroup>
     <_SpecFlow_Tools_MsBuild_Generation_Imported>true</_SpecFlow_Tools_MsBuild_Generation_Imported>
+    <SpecFlowCodeBehindOutputPath Condition="'$(SpecFlowCodeBehindOutputPath)' == ''">$(IntermediateOutputPath)Features.Generated\</SpecFlowCodeBehindOutputPath>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(BuildServerMode)' == ''">
@@ -11,22 +12,16 @@
     <BuildServerMode Condition="'$(BuildingInsideVisualStudio)'!='true'">true</BuildServerMode>
   </PropertyGroup>
 
-  <PropertyGroup>
-    <BuildDependsOn>
-      BeforeGenerateSpecFlowCodeBehindFiles;
-      GenerateSpecFlowCodeBehindFiles;
-      AfterGenerateSpecFlowCodeBehindFiles;
-      $(BuildDependsOn)
-    </BuildDependsOn>
-    <CleanDependsOn>
-      CleanGeneratedSpecFlowCodeBehindFiles;
-      $(CleanDependsOn)
-    </CleanDependsOn>
-    <RebuildDependsOn>
-      SwitchToForceGenerate;
-      $(RebuildDependsOn)
-    </RebuildDependsOn>
-  </PropertyGroup>
+  <ItemGroup>
+
+    <!-- Support for Visual Studio Incremental Build
+        https://github.com/techtalk/SpecFlow/issues/1319
+     -->
+    <UpToDateCheckInput Include="@(SpecFlowFeatureFiles)" />
+    <UpToDateCheckBuild Include="@(SpecFlowFeatureFiles->'$(SpecFlowCodeBehindOutputPath)%(RelativeDir)%(Filename)%(Extension)$(DefaultLanguageSourceExtension)')" Original="@(SpecFlowFeatureFiles)" />
+    <CustomAdditionalCompileInputs Include="@(SpecFlowFeatureFiles->'$(SpecFlowCodeBehindOutputPath)%(RelativeDir)%(Filename)%(Extension)$(DefaultLanguageSourceExtension)')" />
+
+  </ItemGroup>
 
   <Target Name="SwitchToForceGenerate">
     <PropertyGroup>
@@ -35,7 +30,7 @@
   </Target>
 
   <Target Name="GenerateSpecFlowCodeBehindFiles"
-          DependsOnTargets="BeforeGenerateSpecFlowCodeBehindFiles">
+          DependsOnTargets="BeforeGenerateSpecFlowCodeBehindFiles" BeforeTargets="BeforeCompile">
 
     <Message Text="SpecFlowFeatureFiles: @(SpecFlowFeatureFiles)" Importance="high" Condition="'$(VerboseOutput)' == 'true'" />
 
@@ -77,6 +72,7 @@
     <!-- Include generated files for compilation. -->
     <ItemGroup>
       <Compile Include="@(SpecFlowFeatureFiles->'$(SpecFlowCodeBehindOutputPath)%(RelativeDir)%(Filename)%(Extension)$(DefaultLanguageSourceExtension)')" />
+      <FileWrites Include="@(SpecFlowFeatureFiles->'$(SpecFlowCodeBehindOutputPath)%(RelativeDir)%(Filename)%(Extension)$(DefaultLanguageSourceExtension)')" />
     </ItemGroup>
   </Target>
 
@@ -88,8 +84,4 @@
     <!-- include any generated SpecFlow files in the compilation of the project if not included yet -->
   </Target>
 
-  
-  <Target Name="CleanGeneratedSpecFlowCodeBehindFiles">
-    <Delete Files="$(SpecFlowCodeBehindOutputPath)**/*$(DefaultLanguageSourceExtension)" ContinueOnError="true" />
-  </Target>
 </Project>
